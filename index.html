@@ -6,7 +6,7 @@
 <title>Juguemos un rato</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-  
+
   body {
     background: linear-gradient(135deg, #ff4d9e 0%, #ff6bc4 25%, #ff8dd1 50%, #ff6bc4 75%, #ff4d9e 100%);
     background-size: 200% 200%;
@@ -68,6 +68,7 @@
     font-size: 29px;
     font-weight: 800;
     margin-bottom: 8px;
+    text-shadow: 0 2px 10px rgba(255, 20, 147, 0.2);
   }
 
 .subtitle {
@@ -90,6 +91,7 @@
     border-radius: 20px;
     border-left: 5px solid #ff1493;
     animation: fadeIn 0.35s ease;
+    box-shadow: inset 0 2px 8px rgba(255, 20, 147, 0.1);
   }
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(12px); }
@@ -113,7 +115,7 @@
     transition: all 0.25s;
     box-shadow: 0 6px 20px rgba(255, 20, 147, 0.3);
   }
-.choices button:hover { transform: translateY(-3px); }
+.choices button:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255, 20, 147, 0.4); }
 .btn-verdad { background: linear-gradient(135deg, #ff1493, #ff69b4); }
 .btn-reto { background: linear-gradient(135deg, #c71585, #db7093); }
 .choices button:active { transform: scale(0.95); }
@@ -124,7 +126,6 @@
     gap: 8px;
     align-items: center;
     animation: fadeIn 0.3s ease;
-    flex-wrap: wrap;
   }
 .input-bar input[type="text"] {
     flex: 1;
@@ -134,16 +135,8 @@
     border-radius: 18px;
     outline: none;
     font-size: 15px;
-    min-width: 100%;
   }
 .input-bar input:focus { border-color: #ff1493; box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.1); }
-
-.btn-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  justify-content: center;
-}
 
 .input-bar button {
     border: none;
@@ -169,14 +162,6 @@
     50% { transform: scale(1.15); }
   }
   input[type="file"] { display: none; }
-  
-.preview {
-  width: 100%;
-  font-size: 13px;
-  color: #d63384;
-  text-align: center;
-  margin-top: 5px;
-}
 </style>
 </head>
 <body>
@@ -194,19 +179,14 @@
   </div>
 
   <div class="input-bar" id="inputBar">
+    <button class="btn-cam" onclick="document.getElementById('foto').click()">📷</button>
+    <input type="file" id="foto" accept="image/*" capture="environment">
+
     <input type="text" id="respuesta" placeholder="Escribe tu respuesta" oninput="toggleSend()">
-    
-    <div class="preview" id="preview"></div>
-    
-    <div class="btn-row">
-      <button class="btn-cam" onclick="document.getElementById('foto').click()">📷</button>
-      <input type="file" id="foto" accept="image/*" capture="environment">
-      
-      <button class="btn-mic" id="btnMic" onclick="toggleRecord()">🎤</button>
-      <input type="file" id="audio" accept="audio/*" capture="user">
-      
-      <button class="btn-send" id="btnSend" onclick="enviarWhatsApp()">➤</button>
-    </div>
+
+    <button class="btn-mic" id="btnMic" onclick="toggleRecord()">🎤</button>
+
+    <button class="btn-send" id="btnSend" onclick="compartirRespuesta()" style="display:none">➤</button>
   </div>
 </div>
 
@@ -259,9 +239,10 @@ const extrasReto = [
 let usadas = { verdad: [], reto: [] };
 let preguntaActual = "";
 let mediaRecorder;
-let audioBlob = null;
-let imageBlob = null;
+let audioChunks = [];
 let isRecording = false;
+let fotoBlob = null;
+let audioBlob = null;
 const numero = "912386464";
 
 function lanzarFlores() {
@@ -280,7 +261,10 @@ function lanzarFlores() {
 }
 
 function getQuestion(tipo) {
-  let poolCompleto = [...juego[tipo],...(tipo === 'verdad'? extrasVerdad : extrasReto)];
+  let poolBase = juego[tipo];
+  let poolExtra = tipo === 'verdad'? extrasVerdad : extrasReto;
+  let poolCompleto = [...poolBase,...poolExtra];
+
   let poolDisponible = poolCompleto.filter(q =>!usadas[tipo].includes(q));
 
   if (poolDisponible.length === 0) {
@@ -300,7 +284,8 @@ function getQuestion(tipo) {
 
 function toggleSend() {
   const texto = document.getElementById('respuesta').value.trim();
-  document.getElementById('btnSend').style.display = (texto || audioBlob || imageBlob)? 'flex' : 'none';
+  const tieneArchivo = fotoBlob!== null || audioBlob!== null;
+  document.getElementById('btnSend').style.display = (texto || tieneArchivo)? 'flex' : 'none';
 }
 
 async function toggleRecord() {
@@ -310,12 +295,13 @@ async function toggleRecord() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
-      let chunks = [];
+      audioChunks = [];
+      audioBlob = null;
 
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
       mediaRecorder.onstop = () => {
-        audioBlob = new Blob(chunks, { type: 'audio/ogg; codecs=opus' });
-        document.getElementById('preview').innerText = "🎤 Audio listo para enviar";
+        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        document.getElementById('respuesta').value = "[Audio grabado]";
         toggleSend();
         stream.getTracks().forEach(track => track.stop());
       };
@@ -323,9 +309,8 @@ async function toggleRecord() {
       mediaRecorder.start();
       isRecording = true;
       btnMic.classList.add('recording');
-      document.getElementById('preview').innerText = "🔴 Grabando...";
     } catch(e) {
-      alert('Activa el permiso del micrófono en el navegador. Funciona solo en HTTPS.');
+      alert('No pude acceder al micrófono. Revisa los permisos en configuración del navegador.');
     }
   } else {
     mediaRecorder.stop();
@@ -336,37 +321,40 @@ async function toggleRecord() {
 
 document.getElementById('foto').addEventListener('change', function() {
   if (this.files.length > 0) {
-    imageBlob = this.files;
-    document.getElementById('preview').innerText = "📷 Foto lista: " + this.files[0].name;
+    fotoBlob = this.files[0];
+    document.getElementById('respuesta').value = "[Foto adjunta]";
     toggleSend();
   }
 });
 
-function enviarWhatsApp() {
-  let respuesta = document.getElementById('respuesta').value;
-  let mensaje = `Pregunta: ${preguntaActual}%0ARespuesta: ${respuesta}`;
-  
-  // Abrir WhatsApp con el texto
-  window.open(`https://wa.me/${numero}?text=${mensaje}`, '_blank');
-  
-  // Si hay foto o audio, abrir selector de WhatsApp
-  setTimeout(() => {
-    if (imageBlob) {
-      document.getElementById('foto').click();
-      alert('Ahora selecciona la foto y envíala en WhatsApp');
-    } else if (audioBlob) {
-      document.getElementById('audio').click();
-      alert('Ahora selecciona el audio y envíalo en WhatsApp');
+async function compartirRespuesta() {
+  const texto = document.getElementById('respuesta').value.trim();
+  const mensaje = `Pregunta: ${preguntaActual}\nRespuesta: ${texto}`;
+
+  const archivos = [];
+  if (fotoBlob) archivos.push(new File([fotoBlob], "foto.jpg", { type: fotoBlob.type }));
+  if (audioBlob) archivos.push(new File([audioBlob], "audio.webm", { type: audioBlob.type }));
+
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: archivos })) {
+    try {
+      await navigator.share({
+        title: 'Juguemos un rato',
+        text: mensaje,
+        files: archivos
+      });
+    } catch(err) {
+      console.log('Cancelado:', err);
     }
-  }, 1500);
+  } else {
+    // Fallback: solo texto por WhatsApp
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, '_blank');
+  }
 
   // Reset
   document.getElementById('respuesta').value = "";
-  document.getElementById('preview').innerText = "";
-  audioBlob = null;
-  imageBlob = null;
   document.getElementById('foto').value = "";
-  document.getElementById('audio').value = "";
+  fotoBlob = null;
+  audioBlob = null;
   document.getElementById('inputBar').style.display = 'none';
   document.getElementById('question').style.display = 'none';
   document.getElementById('choices').style.display = 'flex';
