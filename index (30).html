@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juguemos un rato</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+  
+  body {
+    background: linear-gradient(135deg, #ff4d9e 0%, #ff6bc4 25%, #ff8dd1 50%, #ff6bc4 75%, #ff4d9e 100%);
+    background-size: 200% 200%;
+    animation: gradientMove 8s ease infinite;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    overflow: hidden;
+    position: relative;
+  }
+  @keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+.falling {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+.falling span {
+    position: absolute;
+    top: -10%;
+    animation: fall linear forwards;
+    opacity: 0.9;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+  }
+
+.card {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    border-radius: 28px;
+    width: 100%;
+    max-width: 390px;
+    padding: 34px 26px;
+    box-shadow: 0 30px 70px rgba(255, 77, 158, 0.45);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    animation: pop 0.5s cubic-bezier(0.68,-0.55,0.265,1.55);
+    border: 2px solid rgba(255, 107, 196, 0.3);
+  }
+  @keyframes pop {
+    from { transform: scale(0.88); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+.title {
+    background: linear-gradient(135deg, #ff1493, #c71585, #ff69b4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 29px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+.subtitle {
+    color: #d63384;
+    font-size: 15px;
+    margin-bottom: 25px;
+    font-weight: 600;
+  }
+
+.question {
+    font-size: 18px;
+    color: #2d1b2e;
+    margin: 20px 0 25px;
+    min-height: 60px;
+    line-height: 1.6;
+    display: none;
+    text-align: left;
+    background: linear-gradient(135deg, #fff0f7, #ffe4f1);
+    padding: 18px 20px;
+    border-radius: 20px;
+    border-left: 5px solid #ff1493;
+    animation: fadeIn 0.35s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+.choices {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+.choices button {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    border-radius: 18px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    color: white;
+    transition: all 0.25s;
+    box-shadow: 0 6px 20px rgba(255, 20, 147, 0.3);
+  }
+.choices button:hover { transform: translateY(-3px); }
+.btn-verdad { background: linear-gradient(135deg, #ff1493, #ff69b4); }
+.btn-reto { background: linear-gradient(135deg, #c71585, #db7093); }
+.choices button:active { transform: scale(0.95); }
+
+.input-bar {
+    display: none;
+    margin-top: 18px;
+    gap: 8px;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+    flex-wrap: wrap;
+  }
+.input-bar input[type="text"] {
+    flex: 1;
+    border: 2px solid #ffb6d9;
+    background: #fff;
+    padding: 14px 16px;
+    border-radius: 18px;
+    outline: none;
+    font-size: 15px;
+    min-width: 100%;
+  }
+.input-bar input:focus { border-color: #ff1493; box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.1); }
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+}
+
+.input-bar button {
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.2s;
+  }
+.btn-cam { background: linear-gradient(135deg, #c71585, #db7093); }
+.btn-mic { background: linear-gradient(135deg, #c71585, #db7093); }
+.btn-mic.recording { background: #ff1744; animation: pulse 1s infinite; }
+.btn-send { background: linear-gradient(135deg, #ff1493, #ff69b4); }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+  input[type="file"] { display: none; }
+  
+.preview {
+  width: 100%;
+  font-size: 13px;
+  color: #d63384;
+  text-align: center;
+  margin-top: 5px;
+}
+</style>
+</head>
+<body>
+<div class="falling" id="falling"></div>
+
+<div class="card">
+  <div class="title">Juguemos un rato</div>
+  <div class="subtitle">Verdad o Reto 💖</div>
+
+  <div class="question" id="question"></div>
+
+  <div class="choices" id="choices">
+    <button class="btn-verdad" onclick="getQuestion('verdad')">Verdad</button>
+    <button class="btn-reto" onclick="getQuestion('reto')">Reto</button>
+  </div>
+
+  <div class="input-bar" id="inputBar">
+    <input type="text" id="respuesta" placeholder="Escribe tu respuesta" oninput="toggleSend()">
+    
+    <div class="preview" id="preview"></div>
+    
+    <div class="btn-row">
+      <button class="btn-cam" onclick="document.getElementById('foto').click()">📷</button>
+      <input type="file" id="foto" accept="image/*" capture="environment">
+      
+      <button class="btn-mic" id="btnMic" onclick="toggleRecord()">🎤</button>
+      <input type="file" id="audio" accept="audio/*" capture="user">
+      
+      <button class="btn-send" id="btnSend" onclick="enviarWhatsApp()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const juego = {
+  verdad: [
+    "¿Qué detalle pequeño hace que alguien te guste más?",
+    "¿Cuál fue el último mensaje que te hizo sonreír sin querer?",
+    "¿Qué tipo de cumplido nunca falla contigo?",
+    "¿Qué te da mariposas en el estómago cuando te lo dicen?",
+    "¿Prefieres una mirada larga o un abrazo espontáneo? ¿Por qué?",
+    "¿Qué canción te recuerda a alguien especial?",
+    "¿Qué te hace pensar 'wow, qué detalle' de alguien?",
+    "¿Cuál es tu forma favorita de que te presten atención?",
+    "¿Qué te haría decir 'ok, me conquistaste'?",
+    "¿Qué pequeño gesto te derrite?"
+  ],
+  reto: [
+    "Mándame un audio diciendo mi nombre como si estuvieras feliz de oírme",
+    "Escribe una frase coqueta de 8 palabras y mándala",
+    "Tómate una selfie con tu mejor sonrisa y envíala",
+    "Mándame una foto de algo rosa que veas ahora",
+    "Escribe 3 cosas que te parecen atractivas en alguien",
+    "Mándame un emoji que usarías si quisieras coquetear",
+    "Recomiéndame una canción para dedicar en secreto"
+  ]
+};
+
+const extrasVerdad = [
+  "¿Qué te hace sentir especial sin que te lo digan directo?",
+  "¿Qué tipo de conversación te mantiene despierta hasta tarde?",
+  "¿Qué prefieres: un mensaje largo o un audio corto?",
+  "¿Qué detalle notas de alguien en los primeros 5 minutos?",
+  "¿Qué te hace decir 'este tiene buen gusto'?",
+  "¿Qué te gustaría que alguien notara de ti sin que lo menciones?",
+  "¿Qué te pone de buen humor al instante?",
+  "¿Qué pequeña sorpresa te haría feliz hoy?"
+];
+
+const extrasReto = [
+  "Mándame un audio riéndote por 3 segundos",
+  "Escribe una frase que usarías para romper el hielo",
+  "Tómate una foto haciendo ojitos y envíala",
+  "Mándame una foto de tu lugar favorito en este momento",
+  "Escribe el mejor piropo que te han dicho",
+  "Mándame un sticker que describa tu mood ahora",
+  "Di 'te reto a responder esto' en audio con voz coqueta"
+];
+
+let usadas = { verdad: [], reto: [] };
+let preguntaActual = "";
+let mediaRecorder;
+let audioBlob = null;
+let imageBlob = null;
+let isRecording = false;
+const numero = "912386464";
+
+function lanzarFlores() {
+  const emojis = ['💖','🌸','💕','✨','🌺','💘','💗','🌷'];
+  const contenedor = document.getElementById('falling');
+  contenedor.innerHTML = '';
+  for(let i=0; i<20; i++){
+    let span = document.createElement('span');
+    span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    span.style.left = Math.random()*100 + 'vw';
+    span.style.animationDuration = (3 + Math.random()*3) + 's';
+    span.style.fontSize = (20 + Math.random()*16) + 'px';
+    contenedor.appendChild(span);
+  }
+  setTimeout(()=>{ contenedor.innerHTML = ''; }, 5000);
+}
+
+function getQuestion(tipo) {
+  let poolCompleto = [...juego[tipo],...(tipo === 'verdad'? extrasVerdad : extrasReto)];
+  let poolDisponible = poolCompleto.filter(q =>!usadas[tipo].includes(q));
+
+  if (poolDisponible.length === 0) {
+    usadas[tipo] = [];
+    poolDisponible = poolCompleto;
+  }
+
+  preguntaActual = poolDisponible[Math.floor(Math.random() * poolDisponible.length)];
+  usadas[tipo].push(preguntaActual);
+
+  document.getElementById('question').innerText = preguntaActual;
+  document.getElementById('question').style.display = 'block';
+  document.getElementById('choices').style.display = 'none';
+  document.getElementById('inputBar').style.display = 'flex';
+  lanzarFlores();
+}
+
+function toggleSend() {
+  const texto = document.getElementById('respuesta').value.trim();
+  document.getElementById('btnSend').style.display = (texto || audioBlob || imageBlob)? 'flex' : 'none';
+}
+
+async function toggleRecord() {
+  const btnMic = document.getElementById('btnMic');
+
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      let chunks = [];
+
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(chunks, { type: 'audio/ogg; codecs=opus' });
+        document.getElementById('preview').innerText = "🎤 Audio listo para enviar";
+        toggleSend();
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      btnMic.classList.add('recording');
+      document.getElementById('preview').innerText = "🔴 Grabando...";
+    } catch(e) {
+      alert('Activa el permiso del micrófono en el navegador. Funciona solo en HTTPS.');
+    }
+  } else {
+    mediaRecorder.stop();
+    isRecording = false;
+    btnMic.classList.remove('recording');
+  }
+}
+
+document.getElementById('foto').addEventListener('change', function() {
+  if (this.files.length > 0) {
+    imageBlob = this.files;
+    document.getElementById('preview').innerText = "📷 Foto lista: " + this.files[0].name;
+    toggleSend();
+  }
+});
+
+function enviarWhatsApp() {
+  let respuesta = document.getElementById('respuesta').value;
+  let mensaje = `Pregunta: ${preguntaActual}%0ARespuesta: ${respuesta}`;
+  
+  // Abrir WhatsApp con el texto
+  window.open(`https://wa.me/${numero}?text=${mensaje}`, '_blank');
+  
+  // Si hay foto o audio, abrir selector de WhatsApp
+  setTimeout(() => {
+    if (imageBlob) {
+      document.getElementById('foto').click();
+      alert('Ahora selecciona la foto y envíala en WhatsApp');
+    } else if (audioBlob) {
+      document.getElementById('audio').click();
+      alert('Ahora selecciona el audio y envíalo en WhatsApp');
+    }
+  }, 1500);
+
+  // Reset
+  document.getElementById('respuesta').value = "";
+  document.getElementById('preview').innerText = "";
+  audioBlob = null;
+  imageBlob = null;
+  document.getElementById('foto').value = "";
+  document.getElementById('audio').value = "";
+  document.getElementById('inputBar').style.display = 'none';
+  document.getElementById('question').style.display = 'none';
+  document.getElementById('choices').style.display = 'flex';
+  document.getElementById('btnSend').style.display = 'none';
+}
+</script>
+</body>
+</html>
