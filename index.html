@@ -186,7 +186,7 @@
 
     <button class="btn-mic" id="btnMic" onclick="toggleRecord()">🎤</button>
 
-    <button class="btn-send" id="btnSend" onclick="compartirRespuesta()" style="display:none">➤</button>
+    <button class="btn-send" id="btnSend" onclick="enviarRespuesta()" style="display:none">➤</button>
   </div>
 </div>
 
@@ -194,62 +194,29 @@
 const juego = {
   verdad: [
     "¿Qué detalle pequeño hace que alguien te guste más?",
-    "¿Cuál fue el último mensaje que te hizo sonreír sin querer?",
-    "¿Qué tipo de cumplido nunca falla contigo?",
-    "¿Qué te da mariposas en el estómago cuando te lo dicen?",
-    "¿Prefieres una mirada larga o un abrazo espontáneo? ¿Por qué?",
-    "¿Qué canción te recuerda a alguien especial?",
-    "¿Qué te hace pensar 'wow, qué detalle' de alguien?",
-    "¿Cuál es tu forma favorita de que te presten atención?",
-    "¿Qué te haría decir 'ok, me conquistaste'?",
-    "¿Qué pequeño gesto te derrite?"
+    "¿Cuál fue el último mensaje que te hizo sonreír sin querer?"
   ],
   reto: [
     "Mándame un audio diciendo mi nombre como si estuvieras feliz de oírme",
-    "Escribe una frase coqueta de 8 palabras y mándala",
-    "Tómate una selfie con tu mejor sonrisa y envíala",
-    "Mándame una foto de algo rosa que veas ahora",
-    "Escribe 3 cosas que te parecen atractivas en alguien",
-    "Mándame un emoji que usarías si quisieras coquetear",
-    "Recomiéndame una canción para dedicar en secreto"
+    "Tómate una selfie con tu mejor sonrisa y envíala"
   ]
 };
 
-const extrasVerdad = [
-  "¿Qué te hace sentir especial sin que te lo digan directo?",
-  "¿Qué tipo de conversación te mantiene despierta hasta tarde?",
-  "¿Qué prefieres: un mensaje largo o un audio corto?",
-  "¿Qué detalle notas de alguien en los primeros 5 minutos?",
-  "¿Qué te hace decir 'este tiene buen gusto'?",
-  "¿Qué te gustaría que alguien notara de ti sin que lo menciones?",
-  "¿Qué te pone de buen humor al instante?",
-  "¿Qué pequeña sorpresa te haría feliz hoy?"
-];
-
-const extrasReto = [
-  "Mándame un audio riéndote por 3 segundos",
-  "Escribe una frase que usarías para romper el hielo",
-  "Tómate una foto haciendo ojitos y envíala",
-  "Mándame una foto de tu lugar favorito en este momento",
-  "Escribe el mejor piropo que te han dicho",
-  "Mándame un sticker que describa tu mood ahora",
-  "Di 'te reto a responder esto' en audio con voz coqueta"
-];
+const extrasVerdad = [];
+const extrasReto = [];
 
 let usadas = { verdad: [], reto: [] };
 let preguntaActual = "";
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
-let fotoBlob = null;
-let audioBlob = null;
 const numero = "912386464";
 
 function lanzarFlores() {
   const emojis = ['💖','🌸','💕','✨','🌺','💘','💗','🌷'];
   const contenedor = document.getElementById('falling');
   contenedor.innerHTML = '';
-  for(let i=0; i<20; i++){
+  for(let i=0; i<15; i++){
     let span = document.createElement('span');
     span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
     span.style.left = Math.random()*100 + 'vw';
@@ -257,23 +224,23 @@ function lanzarFlores() {
     span.style.fontSize = (20 + Math.random()*16) + 'px';
     contenedor.appendChild(span);
   }
-  setTimeout(()=>{ contenedor.innerHTML = ''; }, 5000);
+  setTimeout(()=>{ contenedor.innerHTML = ''; }, 4000);
 }
 
 function getQuestion(tipo) {
-  let poolBase = juego[tipo];
+  let poolBase = juego;
   let poolExtra = tipo === 'verdad'? extrasVerdad : extrasReto;
   let poolCompleto = [...poolBase,...poolExtra];
 
-  let poolDisponible = poolCompleto.filter(q =>!usadas[tipo].includes(q));
+  let poolDisponible = poolCompleto.filter(q =>!usadas.includes(q));
 
   if (poolDisponible.length === 0) {
-    usadas[tipo] = [];
+    usadas = [];
     poolDisponible = poolCompleto;
   }
 
   preguntaActual = poolDisponible[Math.floor(Math.random() * poolDisponible.length)];
-  usadas[tipo].push(preguntaActual);
+  usadas.push(preguntaActual);
 
   document.getElementById('question').innerText = preguntaActual;
   document.getElementById('question').style.display = 'block';
@@ -284,8 +251,7 @@ function getQuestion(tipo) {
 
 function toggleSend() {
   const texto = document.getElementById('respuesta').value.trim();
-  const tieneArchivo = fotoBlob!== null || audioBlob!== null;
-  document.getElementById('btnSend').style.display = (texto || tieneArchivo)? 'flex' : 'none';
+  document.getElementById('btnSend').style.display = texto? 'flex' : 'none';
 }
 
 async function toggleRecord() {
@@ -296,21 +262,27 @@ async function toggleRecord() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
       audioChunks = [];
-      audioBlob = null;
 
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
       mediaRecorder.onstop = () => {
-        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        document.getElementById('respuesta').value = "[Audio grabado]";
-        toggleSend();
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        enviarConArchivos(blob, 'audio.webm', 'Audio');
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       isRecording = true;
       btnMic.classList.add('recording');
+
+      setTimeout(() => {
+        if (isRecording) {
+          mediaRecorder.stop();
+          isRecording = false;
+          btnMic.classList.remove('recording');
+        }
+      }, 5000);
+
     } catch(e) {
-      alert('No pude acceder al micrófono. Revisa los permisos en configuración del navegador.');
+      alert('Activa el permiso del micrófono');
     }
   } else {
     mediaRecorder.stop();
@@ -321,40 +293,38 @@ async function toggleRecord() {
 
 document.getElementById('foto').addEventListener('change', function() {
   if (this.files.length > 0) {
-    fotoBlob = this.files[0];
-    document.getElementById('respuesta').value = "[Foto adjunta]";
-    toggleSend();
+    enviarConArchivos(this.files[0], 'foto.jpg', 'Foto');
+    this.value = '';
   }
 });
 
-async function compartirRespuesta() {
-  const texto = document.getElementById('respuesta').value.trim();
-  const mensaje = `Pregunta: ${preguntaActual}\nRespuesta: ${texto}`;
+function enviarConArchivos(file, nombre, tipo) {
+  const mensaje = `Pregunta: ${preguntaActual}\nRespuesta: ${tipo} enviada`;
 
-  const archivos = [];
-  if (fotoBlob) archivos.push(new File([fotoBlob], "foto.jpg", { type: fotoBlob.type }));
-  if (audioBlob) archivos.push(new File([audioBlob], "audio.webm", { type: audioBlob.type }));
-
-  if (navigator.share && navigator.canShare && navigator.canShare({ files: archivos })) {
-    try {
-      await navigator.share({
-        title: 'Juguemos un rato',
-        text: mensaje,
-        files: archivos
-      });
-    } catch(err) {
-      console.log('Cancelado:', err);
-    }
+  if (navigator.share && navigator.canShare({ files: })) {
+    navigator.share({
+      text: mensaje,
+      files:
+    }).then(() => {
+      resetPantalla();
+    }).catch(() => {});
   } else {
-    // Fallback: solo texto por WhatsApp
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, '_blank');
+    resetPantalla();
   }
+}
 
-  // Reset
+function enviarRespuesta() {
+  const texto = document.getElementById('respuesta').value.trim();
+  if (!texto) return;
+
+  const mensaje = `Pregunta: ${preguntaActual}\nRespuesta: ${texto}`;
+  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, '_blank');
+  resetPantalla();
+}
+
+function resetPantalla() {
   document.getElementById('respuesta').value = "";
-  document.getElementById('foto').value = "";
-  fotoBlob = null;
-  audioBlob = null;
   document.getElementById('inputBar').style.display = 'none';
   document.getElementById('question').style.display = 'none';
   document.getElementById('choices').style.display = 'flex';
