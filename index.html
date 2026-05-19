@@ -21,7 +21,7 @@
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-   .card {
+  .card {
         background: rgba(255, 255, 255, 0.96);
         backdrop-filter: blur(12px);
         border-radius: 28px;
@@ -32,7 +32,7 @@
         text-align: center;
         border: 2px solid rgba(255, 107, 196, 0.3);
     }
-   .title {
+  .title {
         background: linear-gradient(135deg, #ff1493, #c71585, #ff69b4);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -40,8 +40,8 @@
         font-weight: 800;
         margin-bottom: 8px;
     }
-   .subtitle { color: #d63384; font-size: 15px; margin-bottom: 25px; font-weight: 600; }
-   .question {
+  .subtitle { color: #d63384; font-size: 15px; margin-bottom: 25px; font-weight: 600; }
+  .question {
         font-size: 18px;
         color: #2d1b2e;
         margin: 20px 0 25px;
@@ -54,8 +54,8 @@
         border-radius: 20px;
         border-left: 5px solid #ff1493;
     }
-   .choices { display: flex; gap: 12px; justify-content: center; }
-   .choices button {
+  .choices { display: flex; gap: 12px; justify-content: center; }
+  .choices button {
         flex: 1;
         padding: 16px;
         border: none;
@@ -65,15 +65,15 @@
         cursor: pointer;
         color: white;
     }
-   .btn-verdad { background: linear-gradient(135deg, #ff1493, #ff69b4); }
-   .btn-reto { background: linear-gradient(135deg, #c71585, #db7093); }
-   .input-bar {
+  .btn-verdad { background: linear-gradient(135deg, #ff1493, #ff69b4); }
+  .btn-reto { background: linear-gradient(135deg, #c71585, #db7093); }
+  .input-bar {
         display: none;
         margin-top: 18px;
         gap: 8px;
         align-items: center;
     }
-   .input-bar input[type="text"] {
+  .input-bar input[type="text"] {
         flex: 1;
         border: 2px solid #ffb6d9;
         background: #fff;
@@ -82,7 +82,7 @@
         outline: none;
         font-size: 15px;
     }
-   .input-bar button {
+  .input-bar button {
         border: none;
         width: 48px;
         height: 48px;
@@ -94,10 +94,10 @@
         font-size: 20px;
         cursor: pointer;
     }
-   .btn-cam { background: linear-gradient(135deg, #c71585, #db7093); }
-   .btn-mic { background: linear-gradient(135deg, #c71585, #db7093); }
-   .btn-mic.recording { background: #ff1744; }
-   .btn-send { background: linear-gradient(135deg, #ff1493, #ff69b4); }
+  .btn-cam { background: linear-gradient(135deg, #c71585, #db7093); }
+  .btn-mic { background: linear-gradient(135deg, #c71585, #db7093); }
+  .btn-mic.recording { background: #ff1744; }
+  .btn-send { background: linear-gradient(135deg, #ff1493, #ff69b4); }
     input[type="file"] { display: none; }
 </style>
 </head>
@@ -121,17 +121,38 @@
 
 <script>
 const juego = {
-  verdad: ["¿Qué detalle pequeño hace que alguien te guste más?", "¿Cuál fue el último mensaje que te hizo sonreír?"],
-  reto: ["Mándame un audio diciendo mi nombre", "Tómate una selfie y envíala"]
+  verdad: [
+    "¿Qué detalle pequeño hace que alguien te guste más?",
+    "¿Cuál fue el último mensaje que te hizo sonreír?",
+    "¿Qué tipo de cumplido nunca falla contigo?"
+  ],
+  reto: [
+    "Mándame un audio diciendo mi nombre",
+    "Tómate una selfie y envíala",
+    "Mándame una foto de algo rosa que veas ahora"
+  ]
 };
+
+let usadas = { verdad: [], reto: [] };
 let preguntaActual = "";
 let mediaRecorder, audioChunks = [], isRecording = false;
 let fotoFile = null, audioFile = null;
 const numero = "51912386464"; // 51 = Perú
 
 function getQuestion(tipo) {
-  const pool = [...juego[tipo]];
-  preguntaActual = pool[Math.floor(Math.random() * pool.length)];
+  let pool = juego;
+  let usadasTipo = usadas;
+
+  let disponibles = pool.filter(q =>!usadasTipo.includes(q));
+
+  if (disponibles.length === 0) {
+    usadas = [];
+    disponibles = pool;
+  }
+
+  preguntaActual = disponibles[Math.floor(Math.random() * disponibles.length)];
+  usadasTipo.push(preguntaActual);
+
   document.getElementById('question').innerText = preguntaActual;
   document.getElementById('question').style.display = 'block';
   document.getElementById('choices').style.display = 'none';
@@ -160,6 +181,13 @@ async function toggleRecord() {
       mediaRecorder.start();
       isRecording = true;
       btnMic.classList.add('recording');
+      setTimeout(() => {
+        if (isRecording) {
+          mediaRecorder.stop();
+          isRecording = false;
+          btnMic.classList.remove('recording');
+        }
+      }, 5000);
     } catch(e) {
       alert('Activa el permiso del micrófono');
     }
@@ -185,18 +213,15 @@ function enviar() {
   if (fotoFile) archivos.push(fotoFile);
   if (audioFile) archivos.push(audioFile);
 
-  // Si hay archivos, usa navigator.share para adjuntarlos
   if (navigator.share && archivos.length > 0) {
     navigator.share({
       text: mensaje,
       files: archivos
     }).catch(() => {});
   } else {
-    // Si solo hay texto, abre directo el chat
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, '_blank');
   }
 
-  // Reset
   document.getElementById('respuesta').value = "";
   document.getElementById('foto').value = "";
   fotoFile = null;
